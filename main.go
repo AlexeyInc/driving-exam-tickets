@@ -14,77 +14,98 @@ const (
 	tokenConst  = "1Pc0p-tFCUjNStwCeGZmpckv5c7jCNSSOjA8Ox2RwzPgv03-sio6Io8HsUkxVgnwvEy3ja5Xl9FWXl5WZcKFSQ=="
 )
 
+type Office struct {
+	Name string
+	ID   string
+}
+
 const (
 	DanilaApostolaOffiseID string = "61"
 	BogdanivskaOffiseID    string = "177"
 )
-const checkTimeSec = 10
+const (
+	checkTimeSec             = 30
+	checkBetweenDatesTimeSec = 2
+)
 
-var availableDates = []string{"09", "10", "11", "12", "15", "16", "17", "18", "19"}
+var availableOffises = []Office{
+	{Name: "DanilaApostola", ID: DanilaApostolaOffiseID},
+	{Name: "Bogdanivska", ID: BogdanivskaOffiseID},
+}
+var availableDates = []string{"09", "10", "11", "12", "15", "16", "17", "18", "19", "22", "23", "24"}
 
 func main() {
 
-	for i := 0; i < 100; i++ {
+	for {
 		fmt.Println("Checking...")
 
-		for _, dayMonth := range availableDates {
-			res := CheckFreeTalons(
-				DanilaApostolaOffiseID, dayMonth,
-			)
-			if res != nil {
-				fmt.Printf("DanilaApostola has free talon! %v\n", time.Now())
-			} else {
-				fmt.Printf("DanilaApostola %v - empty\n", dayMonth)
+		for _, office := range availableOffises {
+			for _, dayMonth := range availableDates {
+				res := CheckFreeTalons(office.ID, dayMonth)
+				if len(res.Rows) > 0 {
+					fmt.Printf("%s has free talon! Date: %s, %v\n", office.Name, dayMonth, time.Now().Format(time.TimeOnly))
+					return
+				} else {
+					date := strings.Split(res.FreeDatesForOffice[0].ChDate, "-")
+					if date[len(date)-1] != dayMonth {
+						fmt.Printf("Date for %s should be shifted\n", office.Name)
+					}
+					fmt.Printf("%s: %s %s. Total: %d and no free tickets\n", office.Name, dayMonth, time.Now().Month().String(), res.FreeDatesForOffice[0].Cnt)
+				}
+				time.Sleep(time.Second * checkBetweenDatesTimeSec)
 			}
-		}
-		time.Sleep(time.Second)
-
-		for _, dayMonth := range availableDates {
-			res := CheckFreeTalons(
-				DanilaApostolaOffiseID, dayMonth,
-			)
-			if res != nil {
-				fmt.Printf("Bogdanivska has free talon! %v\n", time.Now())
-			} else {
-				fmt.Printf("Bogdanivska %v - empty\n", dayMonth)
-			}
+			fmt.Println("<------------------------>")
 		}
 
-		fmt.Println("No free talon")
+		// fmt.Printf("Bogdanivska %s - %s %s\n", availableDates[0], availableDates[len(availableDates)-1], time.Now().Month())
+
+		fmt.Println("No appointment tickets available ¯\\_(ツ)_/¯")
 
 		time.Sleep(time.Second * checkTimeSec)
 	}
 }
 
-// Define the structure for "freedatesforoffice" array elements
 type FreeDatesForOffice struct {
 	Cnt    int    `json:"cnt"`
 	ChDate string `json:"chdate"`
 }
 
-// Define the main structure
-type Response struct {
-	Rows               []interface{}        `json:"rows"`
+type Row struct {
+	ID     int    `json:"id"`
+	ChTime string `json:"chtime"`
+}
+
+type FreetimesResponse struct {
+	Rows               []Row                `json:"rows"`
 	TRows              []interface{}        `json:"trows"`
 	FreeDatesForOffice []FreeDatesForOffice `json:"freedatesforoffice"`
 }
 
-func CheckFreeTalons(officeID, monthDay string) []interface{} {
-	// The URL for the POST request
+func CheckFreeTalons(officeID, monthDay string) *FreetimesResponse {
+	// if monthDay == "10" {
+	// 	return &FreetimesResponse{
+	// 		Rows: []Row{
+	// 			{
+	// 				ID:     10,
+	// 				ChTime: "14:35",
+	// 			},
+	// 		},
+	// 	}
+	// }
+
 	url := "https://eq.hsc.gov.ua/site/freetimes"
 
-	// The payload (replace with your actual form data)
+	// The payload
 	data := "office_id=" + officeID + "&date_of_admission=2024-10-" + monthDay + "&question_id=55&es_date=&es_time=" // 61
 	payload := strings.NewReader(data)
 
-	// Create a new POST request
-	req, err := http.NewRequest("POST", url, payload)
+	req, err := http.NewRequest(http.MethodPost, url, payload)
 	if err != nil {
 		fmt.Println("Error creating request:", err)
 		return nil
 	}
 
-	// Set headers as per your request
+	// Set headers
 	req.Header.Set("authority", "eq.hsc.gov.ua")
 	req.Header.Set("method", "POST")
 	req.Header.Set("path", "/site/freetimes")
@@ -92,7 +113,6 @@ func CheckFreeTalons(officeID, monthDay string) []interface{} {
 	req.Header.Set("accept", "*/*")
 	req.Header.Set("accept-encoding", "gzip, deflate, br, zstd")
 	req.Header.Set("accept-language", "en-US,en;q=0.9,ru;q=0.8")
-	// req.Header.Set("content-length", "75") // Content length should be dynamically set by http.Client, can remove this
 	req.Header.Set("content-type", "application/x-www-form-urlencoded; charset=UTF-8")
 	req.Header.Set("cookie", cookieConst)
 	req.Header.Set("origin", "https://eq.hsc.gov.ua")
@@ -108,7 +128,7 @@ func CheckFreeTalons(officeID, monthDay string) []interface{} {
 	req.Header.Set("x-csrf-token", tokenConst)
 	req.Header.Set("x-requested-with", "XMLHttpRequest")
 
-	// Create a client and execute the request
+	// Execute the request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -122,15 +142,13 @@ func CheckFreeTalons(officeID, monthDay string) []interface{} {
 	buf.ReadFrom(resp.Body)
 	responseBody := buf.String()
 
-	var responseObj Response
-	err = json.Unmarshal([]byte(responseBody), &responseObj)
+	result := new(FreetimesResponse)
+	err = json.Unmarshal([]byte(responseBody), result)
 	if err != nil {
 		fmt.Println("Error unmarshalling:", err)
 		return nil
 	}
 
-	if len(responseObj.Rows) == 0 {
-		return nil
-	}
-	return responseObj.Rows
+	return result
 }
+
