@@ -45,6 +45,9 @@ func StartFreeTicketsCheck() {
 		for _, office := range availableOffises {
 			for _, dayMonth := range availableDates {
 				res := CheckFreeTalons(office.ID, dayMonth)
+				if res == nil {
+					return
+				}
 				if len(res.Rows) > 0 {
 					fmt.Printf("%s has free talon! Date: %s, %v\n", office.Name, dayMonth, time.Now().Format(time.TimeOnly))
 					PlaySiren()
