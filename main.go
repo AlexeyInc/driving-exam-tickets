@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os/exec"
 	"strings"
 	"time"
 )
@@ -20,7 +21,7 @@ type Office struct {
 }
 
 const (
-	DanilaApostolaOffiseID string = "61"
+	DanilaApostolaOffiseID string = "61" // 115
 	BogdanivskaOffiseID    string = "177"
 )
 const (
@@ -35,15 +36,18 @@ var availableOffises = []Office{
 var availableDates = []string{"09", "10", "11", "12", "15", "16", "17", "18", "19", "22", "23", "24"}
 
 func main() {
+	StartFreeTicketsCheck()
+}
 
+func StartFreeTicketsCheck() {
 	for {
 		fmt.Println("Checking...")
-
 		for _, office := range availableOffises {
 			for _, dayMonth := range availableDates {
 				res := CheckFreeTalons(office.ID, dayMonth)
 				if len(res.Rows) > 0 {
 					fmt.Printf("%s has free talon! Date: %s, %v\n", office.Name, dayMonth, time.Now().Format(time.TimeOnly))
+					PlaySiren()
 					return
 				} else {
 					date := strings.Split(res.FreeDatesForOffice[0].ChDate, "-")
@@ -56,8 +60,6 @@ func main() {
 			}
 			fmt.Println("<------------------------>")
 		}
-
-		// fmt.Printf("Bogdanivska %s - %s %s\n", availableDates[0], availableDates[len(availableDates)-1], time.Now().Month())
 
 		fmt.Println("No appointment tickets available ¯\\_(ツ)_/¯")
 
@@ -82,20 +84,8 @@ type FreetimesResponse struct {
 }
 
 func CheckFreeTalons(officeID, monthDay string) *FreetimesResponse {
-	// if monthDay == "10" {
-	// 	return &FreetimesResponse{
-	// 		Rows: []Row{
-	// 			{
-	// 				ID:     10,
-	// 				ChTime: "14:35",
-	// 			},
-	// 		},
-	// 	}
-	// }
-
 	url := "https://eq.hsc.gov.ua/site/freetimes"
 
-	// The payload
 	data := "office_id=" + officeID + "&date_of_admission=2024-10-" + monthDay + "&question_id=55&es_date=&es_time=" // 61
 	payload := strings.NewReader(data)
 
@@ -152,3 +142,19 @@ func CheckFreeTalons(officeID, monthDay string) *FreetimesResponse {
 	return result
 }
 
+func PlaySiren() {
+	playCount := 3
+	for i := 0; i < playCount; i++ {
+		// Play the sound using afplay (macOS)
+		cmd := exec.Command("afplay", "warning.wav")
+		err := cmd.Start()
+		if err != nil {
+			fmt.Println("Error playing sound:", err)
+			return
+		}
+		cmd.Wait()
+
+		time.Sleep(time.Millisecond * 5)
+	}
+	fmt.Println("Good luck :)")
+}
