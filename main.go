@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	cookieConst = "WEBCHSID2=9b4p1qlk3f0vki60qfoi28gd0m; _identity=f0d02a9c35f47e20d8ee0d1daad22ecc82ca40df1b5ceaf2c40eb71022104b90a%3A2%3A%7Bi%3A0%3Bs%3A9%3A%22_identity%22%3Bi%3A1%3Bs%3A20%3A%22%5B2094253%2Cnull%2C28800%5D%22%3B%7D; _csrf=4b9d9cb422a1018f27559944105ac1e6973d022a77ef4c323e59e8dde65040a9a%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%224HyYYo3jBMmKI0oUucRCM_CClnbmxSFz%22%3B%7D"
-	tokenConst  = "1Pc0p-tFCUjNStwCeGZmpckv5c7jCNSSOjA8Ox2RwzPgv03-sio6Io8HsUkxVgnwvEy3ja5Xl9FWXl5WZcKFSQ=="
+	cookieConst = "WEBCHSID2=0upil1bp6ehf2u2hf3e08c23nt; _identity=f0d02a9c35f47e20d8ee0d1daad22ecc82ca40df1b5ceaf2c40eb71022104b90a%3A2%3A%7Bi%3A0%3Bs%3A9%3A%22_identity%22%3Bi%3A1%3Bs%3A20%3A%22%5B2094253%2Cnull%2C28800%5D%22%3B%7D; _csrf=6e2cf44c914afd9c386d25f05809e567f1a46ac3008011e6103664c68dd57dd5a%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%22F3rPz1KHpm0qyfubp5Ez818WkH4m-KK_%22%3B%7D"
+	tokenConst  = "PDILG--VtBvoxDRTmwo9I-BqHxpLpuwbePtuSyrkMJ56AXlLlaT_U5ipBCLibEhBkF9aYHOX1EwTs1omB697wQ=="
 )
 
 type Office struct {
@@ -26,7 +26,8 @@ const (
 )
 const (
 	checkTimeSec             = 30
-	checkBetweenDatesTimeSec = 2
+	checkBetweenDatesTimeSec = 1
+	pauseAfterServerError    = 10
 )
 
 var availableOffises = []Office{
@@ -52,7 +53,7 @@ func StartFreeTicketsCheck() {
 					fmt.Printf("%s has free talon! Date: %s, %v\n", office.Name, dayMonth, time.Now().Format(time.TimeOnly))
 					PlaySiren()
 					return
-				} else {
+				} else if len(res.FreeDatesForOffice) > 0 {
 					date := strings.Split(res.FreeDatesForOffice[0].ChDate, "-")
 					if date[len(date)-1] != dayMonth {
 						fmt.Printf("Date for %s should be shifted\n", office.Name)
@@ -139,7 +140,8 @@ func CheckFreeTalons(officeID, monthDay string) *FreetimesResponse {
 	err = json.Unmarshal([]byte(responseBody), result)
 	if err != nil {
 		fmt.Println("Error unmarshalling:", err)
-		return nil
+		fmt.Printf("Response. StatusCode: %d, Body: %s\n", resp.StatusCode, responseBody)
+		time.Sleep(time.Second * pauseAfterServerError)
 	}
 
 	return result
