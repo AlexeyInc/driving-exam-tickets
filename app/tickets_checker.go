@@ -10,12 +10,13 @@ import (
 )
 
 const (
+	TestID                 string = "28"
 	DanilaApostolaOffiseID string = "61" // 115
 	BogdanivskaOffiseID    string = "177"
 )
 const (
-	CheckTimeSec             = 330
-	CheckBetweenDatesTimeSec = 3
+	CheckTimeSec             = 240
+	CheckBetweenDatesTimeSec = 2005
 	PauseAfterServerError    = 5
 )
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"regexp"
@@ -42,24 +43,38 @@ var availableDates []AvailableDate
 func StartFreeTicketsCheck() {
 	availableDates = getAvalableDates()
 
+	if len(availableDates) == 0 {
+		fmt.Println("Token renewal is required.")
+		return
+	}
+
 	for {
 		fmt.Println("Checking...")
+		unavailableExamDaysCount := 0
 		for _, office := range availableOffises {
 			for _, date := range availableDates {
-				if checkAndNotify(office, date) {
+				if checkAndNotify(office, date, &unavailableExamDaysCount) {
 					return
 				}
-				time.Sleep(time.Second * app.CheckBetweenDatesTimeSec)
+				randCheckBetweenDatesTimeSec := time.Duration(rand.Intn(100) + app.CheckBetweenDatesTimeSec)
+				time.Sleep(time.Millisecond * randCheckBetweenDatesTimeSec)
+
+				if unavailableExamDaysCount > 3 {
+					fmt.Println("unavailable exam days count > 3")
+					unavailableExamDaysCount = 0
+					break
+				}
 			}
 			fmt.Println("<------------------------>")
 		}
 
 		fmt.Println("No appointment tickets available ¯\\_(ツ)_/¯")
-		time.Sleep(time.Second * app.CheckTimeSec)
+		randCheckTimeSec := time.Duration(rand.Intn(30) + app.CheckTimeSec)
+		time.Sleep(time.Second * randCheckTimeSec)
 	}
 }
 
-func checkAndNotify(office Office, date AvailableDate) bool {
+func checkAndNotify(office Office, date AvailableDate, zeroFreeDatesDaysCount *int) bool {
 	res := app.CheckFreeTalons(office.ID, date.Month, date.Day)
 	if res == nil {
 		return false
@@ -75,6 +90,8 @@ func checkAndNotify(office Office, date AvailableDate) bool {
 		} else {
 			fmt.Printf("%s: %s %s. Total left: %d, no free tickets for now\n", office.Name, date.Day, date.Month, res.FreeDatesForOffice[0].Cnt)
 		}
+	} else {
+		*zeroFreeDatesDaysCount++
 	}
 	return false
 }
@@ -122,6 +139,9 @@ func extractAvailableDates(html string) []AvailableDate {
 		if len(match) == 4 {
 			availableDates = append(availableDates, AvailableDate{Month: match[2], Day: match[3]})
 		}
+	}
+	if len(availableDates) == 0 {
+		return []AvailableDate{}
 	}
 	return availableDates[3:] // from (today + 2 days)
 }
