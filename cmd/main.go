@@ -17,7 +17,7 @@ import (
 )
 
 func main() {
-	err := godotenv.Load()
+	err := godotenv.Load("../.env")
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
@@ -35,7 +35,8 @@ type Office struct {
 
 var availableOffises = []Office{
 	// {Name: "DanilaApostola", ID: app.DanilaApostolaOffiseID},
-	{Name: "Bogdanivska", ID: app.BogdanivskaOffiseID},
+	// {Name: "Bogdanivska", ID: app.BogdanivskaOffiseID},
+	{Name: "TestOffice", ID: app.TestID},
 }
 
 var availableDates []AvailableDate
@@ -143,5 +144,5 @@ func extractAvailableDates(html string) []AvailableDate {
 	if len(availableDates) == 0 {
 		return []AvailableDate{}
 	}
-	return availableDates[3:] // from (today + 2 days)
+	return availableDates[2:] // from (today + 1 day)
 }
