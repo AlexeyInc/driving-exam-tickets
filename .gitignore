@@ -20,5 +20,4 @@
 .vscode
 
 # env file
-cmd/.env
-bin/.env
+.env
